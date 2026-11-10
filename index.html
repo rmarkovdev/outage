@@ -31,6 +31,8 @@
     --seg-on: var(--lamp);
     --seg-off: #C5CBD8;
     --seg-none: #DADFE8;
+    --prev-on: #E58A1F;     /* попередній графік: світло — помаранчевий */
+    --prev-off: #8A93A8;    /* попередній графік: немає — темніший сірий */
     --hand: var(--ink);
     --line: rgba(29, 36, 51, .12);
     --display: 'Unbounded', -apple-system, 'Segoe UI', sans-serif;
@@ -42,6 +44,7 @@
     --muted: #97A2BC;
     --seg-off: #2E3A5E;
     --seg-none: #263152;
+    --prev-off: #56628A;
     --hand: #E9EDF5;
     --line: rgba(233, 237, 245, .12);
   }
@@ -52,6 +55,7 @@
       --muted: #97A2BC;
       --seg-off: #39445F;
       --seg-none: #2C3549;
+      --prev-off: #66718D;
       --hand: #E9EDF5;
       --line: rgba(233, 237, 245, .12);
     }
@@ -106,6 +110,15 @@
   .seg.none { fill: var(--seg-none); }
   .tick { fill: var(--fg); font: 600 12px var(--display); text-anchor: middle; dominant-baseline: central; }
   .tick.minor { fill: var(--muted); font-size: 9.5px; font-weight: 400; }
+  .prev.on { fill: var(--prev-on); }
+  .prev.off { fill: var(--prev-off); }
+  .prev.none { fill: var(--seg-none); }
+  .cmp-note { margin: 0 0 8px; text-align: center; font-size: 12px; color: var(--muted); }
+  .compare { appearance: none; display: block; width: 100%; margin: 16px 0 0; padding: 12px;
+    border: 1px solid var(--line); border-radius: 12px; background: transparent; color: var(--fg);
+    font: 600 14px var(--text); cursor: pointer; }
+  .compare[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+  .compare:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
   .tick-line { stroke: var(--muted); stroke-width: .75; opacity: .55; }
   .tick-line.major { stroke: var(--fg); stroke-width: 1; opacity: .7; }
   .hand { stroke: var(--hand); stroke-width: 2.5; stroke-linecap: round; }
@@ -193,6 +206,7 @@
     <span><i class="l-on"></i>світло є</span>
     <span><i class="l-off"></i>немає</span>
   </div>
+  <p id="cmp-note" class="cmp-note" hidden></p>
 
   <fieldset id="list-mode" class="seg-ctl" hidden>
     <legend>Показувати у списку</legend>
@@ -201,6 +215,8 @@
   </fieldset>
 
   <div id="days"></div>
+
+  <button id="compare" type="button" class="compare" hidden></button>
 
   <footer>
     <p id="meta"></p>

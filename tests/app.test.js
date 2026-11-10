@@ -99,3 +99,20 @@ test('toggleFav: add, remove, keep at most two', () => {
   assert.deepEqual(A.toggleFav(['2.2', '4.1'], '3.1'), ['4.1', '3.1']);
   assert.equal(A.MAX_FAVS, 2);
 });
+
+test('scheduleChanged: only a change in a day present in both counts', () => {
+  const clone = o => JSON.parse(JSON.stringify(o));
+  const ts = Object.keys(fixture.fact.data)[0];
+  assert.equal(A.scheduleChanged(fixture, clone(fixture)), false);
+
+  const updOnly = clone(fixture); updOnly.fact.update = '08.11.2026 23:59';
+  assert.equal(A.scheduleChanged(fixture, updOnly), false);
+
+  const newDay = clone(fixture); newDay.fact.data['1794175200'] = fixture.fact.data[ts];
+  assert.equal(A.scheduleChanged(fixture, newDay), false);
+
+  const changed = clone(fixture); changed.fact.data[ts]['GPV2.2']['12'] = 'yes';
+  assert.equal(A.scheduleChanged(fixture, changed), true);
+
+  assert.equal(A.scheduleChanged(null, fixture), false);
+});

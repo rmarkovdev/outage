@@ -6,7 +6,7 @@
 
   // ---------- налаштування ----------
   // Версія застосунку: показується внизу екрана. Піднімайте разом з CACHE у sw.js.
-  const VERSION = 7;
+  const VERSION = 8;
   const DEFAULT_GROUP = '2.2';
   const GROUPS = ['1.1','1.2','2.1','2.2','3.1','3.2','4.1','4.2','5.1','5.2','6.1','6.2'];
   const FILES = ['Poltavaoblenergo.json', 'Poltavaoblenerho.json'];
@@ -130,6 +130,14 @@
     return out;
   }
 
+  // Чи змінився графік між двома завантаженнями: порівнюємо лише дні, які є в обох файлах
+  // (поява графіка на завтра чи зникнення вчорашнього дня — не зміна).
+  function scheduleChanged(oldJson, newJson) {
+    const a = daysContainer(oldJson), b = daysContainer(newJson);
+    if (!a || !b) return false;
+    return Object.keys(b).some(k => k in a && JSON.stringify(a[k]) !== JSON.stringify(b[k]));
+  }
+
   // Збережені черги: додати або прибрати g. Якщо місць немає — витісняється найстаріша.
   function toggleFav(favs, g, max = MAX_FAVS) {
     if (favs.includes(g)) return favs.filter(x => x !== g);
@@ -168,7 +176,7 @@
     return `${h} год ${m} хв`;
   }
 
-  const api = { VERSION, GROUPS, MAX_FAVS, toggleFav, DEFAULT_GROUP, kyiv, addDays, slotsFromHours, buildDays,
+  const api = { VERSION, GROUPS, MAX_FAVS, toggleFav, scheduleChanged, DEFAULT_GROUP, kyiv, addDays, slotsFromHours, buildDays,
     maybeAsOn, intervals, periods, LIST_MODES, status, hhmm, duration };
 
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
@@ -192,6 +200,10 @@
   if (!LIST_MODES.includes(listMode)) listMode = 'off';
   let json = null;
   try { json = JSON.parse(store.get('cache') || 'null'); } catch (e) {}
+  // Попередня версія графіка: зберігається, коли новий файл відрізняється від поточного
+  let prevJson = null;
+  try { prevJson = JSON.parse(store.get('prevCache') || 'null'); } catch (e) {}
+  let compare = false;
   let fetchedAt = Number(store.get('fetchedAt')) || 0;
   let lastError = null;
 
@@ -206,6 +218,10 @@
           if (!r.ok) continue;
           const data = await r.json();
           if (!daysContainer(data)) continue;
+          if (json && scheduleChanged(json, data)) {
+            prevJson = json;
+            store.set('prevCache', JSON.stringify(prevJson));
+          }
           json = data; fetchedAt = Date.now(); lastError = null;
           store.set('cache', JSON.stringify(data));
           store.set('fetchedAt', String(fetchedAt));
@@ -225,23 +241,30 @@
     const a = (deg - 90) * Math.PI / 180;
     return [CX + r * Math.cos(a), CY + r * Math.sin(a)];
   }
-  function segPath(i) {
+  function segPath(i, rIn = R_IN, rOut = R_OUT) {
     const gap = 0.7, a0 = i * 7.5 + gap / 2, a1 = (i + 1) * 7.5 - gap / 2;
-    const [x0, y0] = polar(R_OUT, a0), [x1, y1] = polar(R_OUT, a1);
-    const [x2, y2] = polar(R_IN, a1), [x3, y3] = polar(R_IN, a0);
+    const [x0, y0] = polar(rOut, a0), [x1, y1] = polar(rOut, a1);
+    const [x2, y2] = polar(rIn, a1), [x3, y3] = polar(rIn, a0);
     const f = n => n.toFixed(2);
-    return `M${f(x0)} ${f(y0)}A${R_OUT} ${R_OUT} 0 0 1 ${f(x1)} ${f(y1)}` +
-           `L${f(x2)} ${f(y2)}A${R_IN} ${R_IN} 0 0 0 ${f(x3)} ${f(y3)}Z`;
+    return `M${f(x0)} ${f(y0)}A${rOut} ${rOut} 0 0 1 ${f(x1)} ${f(y1)}` +
+           `L${f(x2)} ${f(y2)}A${rIn} ${rIn} 0 0 0 ${f(x3)} ${f(y3)}Z`;
   }
+  const SEG_CLS = { on: 'on', off: 'off', maybe: 'maybe' };
 
-  function renderDial(slots, nowMin) {
+  // prevSlots — попередній графік: тонка смужка біля внутрішнього краю кільця,
+  // поточний графік тоді займає зовнішню частину сектора.
+  function renderDial(slots, nowMin, prevSlots) {
     const svg = $('#dial');
     let html = `<defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
       <rect width="6" height="6" fill="var(--seg-off)"/><rect width="3" height="6" fill="var(--lamp)"/></pattern></defs>`;
     for (let i = 0; i < 48; i++) {
-      const s = slots ? slots[i] : 'none';
-      const cls = s === 'off' ? 'seg off' : s === 'maybe' ? 'seg maybe' : s === 'on' ? 'seg on' : 'seg none';
-      html += `<path class="${cls}" d="${segPath(i)}"/>`;
+      const cls = 'seg ' + (SEG_CLS[slots && slots[i]] || 'none');
+      if (prevSlots) {
+        html += `<path class="${cls}" d="${segPath(i, R_IN + 11, R_OUT)}"/>`;
+        html += `<path class="prev ${SEG_CLS[prevSlots[i]] || 'none'}" d="${segPath(i, R_IN, R_IN + 9)}"/>`;
+      } else {
+        html += `<path class="${cls}" d="${segPath(i)}"/>`;
+      }
     }
     // Позначки годин: цифра всередині кільця і тонка лінія від неї до початку години на кільці.
     // 0/6/12/18 — виразніше.
@@ -255,9 +278,8 @@
     if (nowMin != null) {
       const deg = nowMin / 1440 * 360;
       const [x0, y0] = polar(R_IN - 3, deg), [x1, y1] = polar(R_OUT + 8, deg);
-      const [xd, yd] = polar(R_OUT + 8, deg);
       html += `<line class="hand" x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}"/>`;
-      html += `<circle class="hand-dot" cx="${xd.toFixed(1)}" cy="${yd.toFixed(1)}" r="4.5"/>`;
+      html += `<circle class="hand-dot" cx="${x1.toFixed(1)}" cy="${y1.toFixed(1)}" r="4.5"/>`;
     }
     svg.innerHTML = html;
   }
@@ -325,7 +347,17 @@
     $('#title').textContent = h.title;
     $('#sub').textContent = h.sub;
     $('#when').textContent = h.when;
-    renderDial(today || null, k.minutes);
+    const prevToday = prevJson ? maybeAsOn(buildDays(prevJson, group))[k.date] : null;
+    const canCompare = !!(today && prevToday && today.join() !== prevToday.join());
+    if (!canCompare) compare = false;
+    renderDial(today || null, k.minutes, compare ? prevToday : null);
+    const prevUpd = prevJson && prevJson.fact && prevJson.fact.update;
+    $('#cmp-note').hidden = !compare;
+    $('#cmp-note').textContent = compare
+      ? `Тонка смужка всередині — попередній графік${prevUpd ? ` (від ${prevUpd})` : ''}` : '';
+    $('#compare').hidden = !canCompare;
+    $('#compare').textContent = compare ? 'Вимкнути порівняння' : 'Порівняти з попереднім графіком';
+    $('#compare').setAttribute('aria-pressed', String(compare));
 
     $('#list-mode').hidden = !json;
     for (const r of document.querySelectorAll('input[name="list-mode"]')) r.checked = r.value === listMode;
@@ -391,8 +423,17 @@
     });
   }
 
+  function initCompare() {
+    $('#compare').addEventListener('click', () => {
+      compare = !compare;
+      render();
+      if (compare) window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
+
   function start() {
     initPicker();
+    initCompare();
     initQuick();
     initListMode();
     render();

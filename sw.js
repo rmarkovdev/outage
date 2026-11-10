@@ -1,6 +1,6 @@
 // Кешує оболонку застосунку та шрифти, щоб він відкривався без інтернету.
 // Графік зберігається окремо (localStorage), тому офлайн видно останній завантажений.
-const CACHE = 'svitlo-v7';  // = VERSION в app.js
+const CACHE = 'svitlo-v8';  // = VERSION в app.js
 const SHELL = ['./', 'index.html', 'app.js', 'manifest.webmanifest',
   'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
