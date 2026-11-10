@@ -91,3 +91,11 @@ test('VERSION in app.js matches CACHE in sw.js', () => {
   const sw = fs.readFileSync(path.join(__dirname, '..', 'sw.js'), 'utf8');
   assert.equal(sw.match(/const CACHE = 'svitlo-v(\d+)'/)[1], String(A.VERSION));
 });
+
+test('toggleFav: add, remove, keep at most two', () => {
+  assert.deepEqual(A.toggleFav([], '2.2'), ['2.2']);
+  assert.deepEqual(A.toggleFav(['2.2'], '4.1'), ['2.2', '4.1']);
+  assert.deepEqual(A.toggleFav(['2.2', '4.1'], '2.2'), ['4.1']);
+  assert.deepEqual(A.toggleFav(['2.2', '4.1'], '3.1'), ['4.1', '3.1']);
+  assert.equal(A.MAX_FAVS, 2);
+});

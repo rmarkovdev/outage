@@ -6,7 +6,7 @@
 
   // ---------- налаштування ----------
   // Версія застосунку: показується внизу екрана. Піднімайте разом з CACHE у sw.js.
-  const VERSION = 5;
+  const VERSION = 6;
   const DEFAULT_GROUP = '2.2';
   const GROUPS = ['1.1','1.2','2.1','2.2','3.1','3.2','4.1','4.2','5.1','5.2','6.1','6.2'];
   const FILES = ['Poltavaoblenergo.json', 'Poltavaoblenerho.json'];
@@ -15,6 +15,7 @@
     'https://cdn.jsdelivr.net/gh/yaroslav2901/OE_OUTAGE_DATA@main/data/'
   ];
   const REFRESH_MS = 5 * 60 * 1000;
+  const MAX_FAVS = 2;   // скільки черг можна зберегти для швидкого перемикання
 
   // ---------- час за Києвом (незалежно від часового поясу телефона) ----------
   function makeFmt() {
@@ -129,6 +130,12 @@
     return out;
   }
 
+  // Збережені черги: додати або прибрати g. Якщо місць немає — витісняється найстаріша.
+  function toggleFav(favs, g, max = MAX_FAVS) {
+    if (favs.includes(g)) return favs.filter(x => x !== g);
+    return favs.concat(g).slice(-max);
+  }
+
   // Поточний стан і найближча зміна
   function status(daysMap, now) {
     const k = kyiv(now);
@@ -161,7 +168,7 @@
     return `${h} год ${m} хв`;
   }
 
-  const api = { VERSION, GROUPS, DEFAULT_GROUP, kyiv, addDays, slotsFromHours, buildDays,
+  const api = { VERSION, GROUPS, MAX_FAVS, toggleFav, DEFAULT_GROUP, kyiv, addDays, slotsFromHours, buildDays,
     maybeAsOn, intervals, periods, LIST_MODES, status, hhmm, duration };
 
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
@@ -177,6 +184,10 @@
 
   let group = store.get('group') || DEFAULT_GROUP;
   if (!GROUPS.includes(group)) group = DEFAULT_GROUP;
+  let favs = [];
+  try { favs = JSON.parse(store.get('favs') || '[]'); } catch (e) {}
+  favs = Array.isArray(favs)
+    ? [...new Set(favs.filter(g => GROUPS.includes(g)))].slice(-MAX_FAVS) : [];
   let listMode = store.get('listMode');
   if (!LIST_MODES.includes(listMode)) listMode = 'off';
   let json = null;
@@ -307,6 +318,7 @@
 
     document.body.dataset.state = !json ? 'none' : st.known ? st.state : 'none';
     $('#group').textContent = group;
+    renderQuick();
 
     const h = json ? headline(st) : { title: lastError ? 'Немає даних' : 'Завантаження…',
       sub: lastError ? 'Перевірте інтернет і спробуйте ще раз' : '', when: '' };
@@ -334,10 +346,42 @@
     if (tc && theme) tc.setAttribute('content', theme);
   }
 
+  function setGroup(g) {
+    if (!GROUPS.includes(g)) return;
+    group = g; store.set('group', g);
+    $('#picker').value = g;
+    render();
+  }
+
   function initPicker() {
     const sel = $('#picker');
     sel.innerHTML = GROUPS.map(g => `<option value="${g}"${g === group ? ' selected' : ''}>Черга ${g}</option>`).join('');
-    sel.addEventListener('change', () => { group = sel.value; store.set('group', group); render(); });
+    sel.addEventListener('change', () => setGroup(sel.value));
+  }
+
+  // ---------- збережені черги (до двох) для перемикання одним дотиком ----------
+  function renderQuick() {
+    const saved = favs.includes(group);
+    const pills = favs.map(g => `<button type="button" class="q-pill${g === group ? ' active' : ''}"
+      data-group="${g}" aria-pressed="${g === group}" aria-label="Черга ${g}">${g}</button>`).join('');
+    const [label, aria] = saved
+      ? [`★ Прибрати ${group}`, `Прибрати чергу ${group} зі збережених`]
+      : favs.length >= MAX_FAVS
+        ? [`☆ Зберегти замість ${favs[0]}`, `Зберегти чергу ${group} замість ${favs[0]}`]
+        : [`☆ Зберегти ${group}`, `Зберегти чергу ${group} для швидкого перемикання`];
+    $('#quick').innerHTML = pills +
+      `<button type="button" class="q-fav${saved ? ' saved' : ''}" data-fav aria-label="${aria}">${label}</button>`;
+  }
+
+  function initQuick() {
+    $('#quick').addEventListener('click', e => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      if (b.dataset.group) { setGroup(b.dataset.group); return; }
+      favs = toggleFav(favs, group);
+      store.set('favs', JSON.stringify(favs));
+      renderQuick();
+    });
   }
 
   function initListMode() {
@@ -349,6 +393,7 @@
 
   function start() {
     initPicker();
+    initQuick();
     initListMode();
     render();
     load();
