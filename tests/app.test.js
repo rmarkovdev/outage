@@ -79,3 +79,10 @@ test('periods: "off" mode matches intervals()', () => {
   const slots = A.buildDays(fixture, '2.2')['2026-11-08'];
   assert.deepEqual(A.periods(slots, 'off'), A.intervals(slots));
 });
+
+test('maybeAsOn: "maybe" slots become "on", others unchanged', () => {
+  const days = A.maybeAsOn(A.buildDays(fixture, '2.2'));
+  const s = days['2026-11-08'];
+  assert.ok(!s.includes('maybe'));
+  assert.deepEqual(fmt(s), ['02:30-06:30', '09:30-13:30', '15:30-19:30', '21:30-24:00']);
+});

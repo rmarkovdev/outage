@@ -93,6 +93,13 @@
     return res;
   }
 
+  // У застосунку «можливе відключення» показуємо як «світло є».
+  function maybeAsOn(daysMap) {
+    const res = {};
+    for (const d in daysMap) res[d] = daysMap[d].map(s => s === 'maybe' ? 'on' : s);
+    return res;
+  }
+
   // Послідовні інтервали без світла / з можливим відключенням
   function intervals(slots) {
     const out = [];
@@ -153,7 +160,7 @@
   }
 
   const api = { GROUPS, DEFAULT_GROUP, kyiv, addDays, slotsFromHours, buildDays,
-    intervals, periods, LIST_MODES, status, hhmm, duration };
+    maybeAsOn, intervals, periods, LIST_MODES, status, hhmm, duration };
 
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
 
@@ -283,7 +290,7 @@
   function render() {
     const now = new Date();
     const k = kyiv(now);
-    const days = json ? buildDays(json, group) : {};
+    const days = json ? maybeAsOn(buildDays(json, group)) : {};
     const st = status(days, now);
     const today = days[k.date], tomorrowDate = addDays(k.date, 1), tomorrow = days[tomorrowDate];
 
