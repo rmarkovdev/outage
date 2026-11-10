@@ -67,3 +67,15 @@ test('unknown day -> known: false', () => {
   const st = A.status(A.buildDays(fixture, '2.2'), new Date('2026-11-20T10:00:00+02:00'));
   assert.equal(st.known, false);
 });
+
+test('periods: "on" mode lists only times with power', () => {
+  const slots = A.buildDays(fixture, '2.2')['2026-11-08'];
+  const on = A.periods(slots, 'on').map(i => `${A.hhmm(i.start * 30)}-${A.hhmm(i.end * 30)}`);
+  assert.deepEqual(on, ['00:00-02:30', '07:00-09:30', '14:00-15:30', '20:00-21:30']);
+  assert.ok(A.periods(slots, 'on').every(i => i.state === 'on'));
+});
+
+test('periods: "off" mode matches intervals()', () => {
+  const slots = A.buildDays(fixture, '2.2')['2026-11-08'];
+  assert.deepEqual(A.periods(slots, 'off'), A.intervals(slots));
+});

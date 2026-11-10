@@ -105,6 +105,21 @@
     return out;
   }
 
+  // Періоди для списку: mode 'off' — без світла і можливі відключення,
+  // mode 'on' — тільки періоди, коли світло точно є.
+  const LIST_MODES = ['off', 'on'];
+  function periods(slots, mode) {
+    if (mode !== 'on') return intervals(slots);
+    const out = [];
+    let cur = null;
+    slots.forEach((s, i) => {
+      if (s !== 'on') { cur = null; return; }
+      if (cur) cur.end = i + 1;
+      else { cur = { state: 'on', start: i, end: i + 1 }; out.push(cur); }
+    });
+    return out;
+  }
+
   // Поточний стан і найближча зміна
   function status(daysMap, now) {
     const k = kyiv(now);
@@ -138,7 +153,7 @@
   }
 
   const api = { GROUPS, DEFAULT_GROUP, kyiv, addDays, slotsFromHours, buildDays,
-    intervals, status, hhmm, duration };
+    intervals, periods, LIST_MODES, status, hhmm, duration };
 
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
 
@@ -153,6 +168,8 @@
 
   let group = store.get('group') || DEFAULT_GROUP;
   if (!GROUPS.includes(group)) group = DEFAULT_GROUP;
+  let listMode = store.get('listMode');
+  if (!LIST_MODES.includes(listMode)) listMode = 'off';
   let json = null;
   try { json = JSON.parse(store.get('cache') || 'null'); } catch (e) {}
   let fetchedAt = Number(store.get('fetchedAt')) || 0;
@@ -249,15 +266,18 @@
     if (!slots) {
       return `<section class="day"><h2>${title}</h2><p class="muted">Графік ще не опубліковано</p></section>`;
     }
-    const list = intervals(slots);
-    const offMin = slots.filter(s => s === 'off').length * 30;
+    const onMode = listMode === 'on';
+    const list = periods(slots, listMode);
     if (!list.length) {
-      return `<section class="day"><h2>${title}</h2><p class="free">Без відключень</p></section>`;
+      const msg = onMode ? '<p class="muted">Світла за графіком не буде</p>' : '<p class="free">Без відключень</p>';
+      return `<section class="day"><h2>${title}</h2>${msg}</section>`;
     }
+    const totalMin = slots.filter(s => s === (onMode ? 'on' : 'off')).length * 30;
+    const total = totalMin ? (onMode ? 'зі світлом ' : 'без світла ') + duration(totalMin) : '';
     const rows = list.map(iv => `<li class="${iv.state}">
         <span class="range">${hhmm(iv.start * 30)}–${hhmm(iv.end * 30)}</span>
         <span class="len">${iv.state === 'maybe' ? 'можливо, ' : ''}${duration((iv.end - iv.start) * 30)}</span></li>`).join('');
-    return `<section class="day"><h2>${title}<span class="total">${offMin ? 'без світла ' + duration(offMin) : ''}</span></h2><ul>${rows}</ul></section>`;
+    return `<section class="day"><h2>${title}<span class="total">${total}</span></h2><ul>${rows}</ul></section>`;
   }
 
   function render() {
@@ -277,6 +297,8 @@
     $('#when').textContent = h.when;
     renderDial(today || null, k.minutes);
 
+    $('#list-mode').hidden = !json;
+    for (const r of document.querySelectorAll('input[name="list-mode"]')) r.checked = r.value === listMode;
     $('#days').innerHTML = json
       ? dayList(`Сьогодні, ${humanDate(k.date)}`, today) + dayList(`Завтра, ${humanDate(tomorrowDate)}`, tomorrow)
       : '';
@@ -299,8 +321,16 @@
     sel.addEventListener('change', () => { group = sel.value; store.set('group', group); render(); });
   }
 
+  function initListMode() {
+    $('#list-mode').addEventListener('change', e => {
+      if (!LIST_MODES.includes(e.target.value)) return;
+      listMode = e.target.value; store.set('listMode', listMode); render();
+    });
+  }
+
   function start() {
     initPicker();
+    initListMode();
     render();
     load();
     setInterval(render, 20 * 1000);

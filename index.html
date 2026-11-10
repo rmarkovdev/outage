@@ -114,6 +114,18 @@
   .legend .l-off { background: var(--seg-off); }
   .legend .l-maybe { background: repeating-linear-gradient(45deg, var(--lamp) 0 2px, var(--seg-off) 2px 4px); }
 
+  .seg-ctl { display: flex; gap: 4px; margin: 8px 0 12px; padding: 3px; border: 1px solid var(--line);
+    border-radius: 12px; }
+  .seg-ctl[hidden] { display: none; }
+  .seg-ctl legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .seg-ctl label { flex: 1; position: relative; }
+  .seg-ctl input { position: absolute; opacity: 0; inset: 0; margin: 0; }
+  .seg-ctl span { display: block; text-align: center; padding: 8px 6px; border-radius: 9px;
+    font-size: 14px; font-weight: 600; color: var(--muted); cursor: pointer; transition: background-color .2s, color .2s; }
+  .seg-ctl input:checked + span { background: var(--fg); color: var(--bg); }
+  .seg-ctl input:focus-visible + span { outline: 2px solid var(--lamp); outline-offset: 2px; }
+  .day li.on { border-left-color: var(--lamp); }
+
   .day { border-top: 1px solid var(--line); padding: 14px 0 6px; }
   .day h2 { margin: 0 0 8px; font: 600 15px/1.3 var(--text); display: flex; justify-content: space-between; gap: 8px; }
   .day .total { font-weight: 400; color: var(--muted); }
@@ -164,6 +176,12 @@
     <span><i class="l-off"></i>немає</span>
     <span><i class="l-maybe"></i>можливо</span>
   </div>
+
+  <fieldset id="list-mode" class="seg-ctl" hidden>
+    <legend>Показувати у списку</legend>
+    <label><input type="radio" name="list-mode" value="off" checked><span>Коли немає світла</span></label>
+    <label><input type="radio" name="list-mode" value="on"><span>Коли світло є</span></label>
+  </fieldset>
 
   <div id="days"></div>
 
