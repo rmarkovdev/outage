@@ -6,7 +6,7 @@
 
   // ---------- налаштування ----------
   // Версія застосунку: показується внизу екрана. Піднімайте разом з CACHE у sw.js.
-  const VERSION = 4;
+  const VERSION = 5;
   const DEFAULT_GROUP = '2.2';
   const GROUPS = ['1.1','1.2','2.1','2.2','3.1','3.2','4.1','4.2','5.1','5.2','6.1','6.2'];
   const FILES = ['Poltavaoblenergo.json', 'Poltavaoblenerho.json'];
@@ -232,10 +232,13 @@
       const cls = s === 'off' ? 'seg off' : s === 'maybe' ? 'seg maybe' : s === 'on' ? 'seg on' : 'seg none';
       html += `<path class="${cls}" d="${segPath(i)}"/>`;
     }
-    // Позначки годин: кожна година біля внутрішнього краю кільця, 0/6/12/18 — виразніше
+    // Позначки годин: цифра всередині кільця і тонка лінія від неї до початку години на кільці.
+    // 0/6/12/18 — виразніше.
     for (let h = 0; h < 24; h++) {
-      const [x, y] = polar(111, h * 15);
-      const major = h % 6 === 0;
+      const deg = h * 15, major = h % 6 === 0;
+      const [x, y] = polar(102, deg);
+      const [lx0, ly0] = polar(major ? 112 : 109, deg), [lx1, ly1] = polar(R_IN - 1, deg);
+      html += `<line class="tick-line${major ? ' major' : ''}" x1="${lx0.toFixed(1)}" y1="${ly0.toFixed(1)}" x2="${lx1.toFixed(1)}" y2="${ly1.toFixed(1)}"/>`;
       html += `<text class="tick${major ? '' : ' minor'}" x="${x.toFixed(1)}" y="${y.toFixed(1)}">${h}</text>`;
     }
     if (nowMin != null) {
