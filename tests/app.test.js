@@ -86,3 +86,8 @@ test('maybeAsOn: "maybe" slots become "on", others unchanged', () => {
   assert.ok(!s.includes('maybe'));
   assert.deepEqual(fmt(s), ['02:30-06:30', '09:30-13:30', '15:30-19:30', '21:30-24:00']);
 });
+
+test('VERSION in app.js matches CACHE in sw.js', () => {
+  const sw = fs.readFileSync(path.join(__dirname, '..', 'sw.js'), 'utf8');
+  assert.equal(sw.match(/const CACHE = 'svitlo-v(\d+)'/)[1], String(A.VERSION));
+});

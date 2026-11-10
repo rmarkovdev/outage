@@ -5,6 +5,8 @@
   'use strict';
 
   // ---------- налаштування ----------
+  // Версія застосунку: показується внизу екрана. Піднімайте разом з CACHE у sw.js.
+  const VERSION = 4;
   const DEFAULT_GROUP = '2.2';
   const GROUPS = ['1.1','1.2','2.1','2.2','3.1','3.2','4.1','4.2','5.1','5.2','6.1','6.2'];
   const FILES = ['Poltavaoblenergo.json', 'Poltavaoblenerho.json'];
@@ -159,7 +161,7 @@
     return `${h} год ${m} хв`;
   }
 
-  const api = { GROUPS, DEFAULT_GROUP, kyiv, addDays, slotsFromHours, buildDays,
+  const api = { VERSION, GROUPS, DEFAULT_GROUP, kyiv, addDays, slotsFromHours, buildDays,
     maybeAsOn, intervals, periods, LIST_MODES, status, hhmm, duration };
 
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
@@ -230,9 +232,11 @@
       const cls = s === 'off' ? 'seg off' : s === 'maybe' ? 'seg maybe' : s === 'on' ? 'seg on' : 'seg none';
       html += `<path class="${cls}" d="${segPath(i)}"/>`;
     }
-    for (let h = 0; h < 24; h += 6) {
-      const [x, y] = polar(108, h * 15);
-      html += `<text class="tick" x="${x.toFixed(1)}" y="${y.toFixed(1)}">${h}</text>`;
+    // Позначки годин: кожна година біля внутрішнього краю кільця, 0/6/12/18 — виразніше
+    for (let h = 0; h < 24; h++) {
+      const [x, y] = polar(111, h * 15);
+      const major = h % 6 === 0;
+      html += `<text class="tick${major ? '' : ' minor'}" x="${x.toFixed(1)}" y="${y.toFixed(1)}">${h}</text>`;
     }
     if (nowMin != null) {
       const deg = nowMin / 1440 * 360;
@@ -269,7 +273,8 @@
       sub: c.next === 'maybe' ? `Можливе вимкнення ${at}` : `Вимкнуть ${at}`, when: left };
   }
 
-  function dayList(title, slots) {
+  // nowIdx — номер поточного півгодинного слота (тільки для сьогодні), щоб підсвітити проміжок
+  function dayList(title, slots, nowIdx) {
     if (!slots) {
       return `<section class="day"><h2>${title}</h2><p class="muted">Графік ще не опубліковано</p></section>`;
     }
@@ -281,9 +286,12 @@
     }
     const totalMin = slots.filter(s => s === (onMode ? 'on' : 'off')).length * 30;
     const total = totalMin ? (onMode ? 'зі світлом ' : 'без світла ') + duration(totalMin) : '';
-    const rows = list.map(iv => `<li class="${iv.state}">
+    const rows = list.map(iv => {
+      const now = nowIdx != null && nowIdx >= iv.start && nowIdx < iv.end;
+      return `<li class="${iv.state}${now ? ' now' : ''}"${now ? ' aria-current="time"' : ''}>
         <span class="range">${hhmm(iv.start * 30)}–${hhmm(iv.end * 30)}</span>
-        <span class="len">${iv.state === 'maybe' ? 'можливо, ' : ''}${duration((iv.end - iv.start) * 30)}</span></li>`).join('');
+        <span class="len">${now ? '<b class="now-tag">зараз</b>' : ''}${iv.state === 'maybe' ? 'можливо, ' : ''}${duration((iv.end - iv.start) * 30)}</span></li>`;
+    }).join('');
     return `<section class="day"><h2>${title}<span class="total">${total}</span></h2><ul>${rows}</ul></section>`;
   }
 
@@ -307,7 +315,7 @@
     $('#list-mode').hidden = !json;
     for (const r of document.querySelectorAll('input[name="list-mode"]')) r.checked = r.value === listMode;
     $('#days').innerHTML = json
-      ? dayList(`Сьогодні, ${humanDate(k.date)}`, today) + dayList(`Завтра, ${humanDate(tomorrowDate)}`, tomorrow)
+      ? dayList(`Сьогодні, ${humanDate(k.date)}`, today, Math.min(47, Math.floor(k.minutes / 30))) + dayList(`Завтра, ${humanDate(tomorrowDate)}`, tomorrow)
       : '';
 
     const upd = json && json.fact && json.fact.update;
@@ -316,6 +324,7 @@
     if (lastError === 'offline') meta += '. Немає інтернету, показано збережений графік';
     else if (lastError) meta += '. Не вдалося оновити';
     $('#meta').textContent = meta;
+    $('#version').textContent = `Версія ${VERSION}`;
 
     const theme = getComputedStyle(document.body).getPropertyValue('--bg').trim();
     const tc = document.querySelector('meta[name="theme-color"]');

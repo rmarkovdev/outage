@@ -46,8 +46,9 @@ Reading it literally (`on, maybe`) produces fake 30-min windows with power.
 ## Deploy
 - GitHub repo `rmarkovdev/outage`, GitHub Pages from branch `main`, folder `/` (root).
   URL: https://rmarkovdev.github.io/outage/
-- **Bump `CACHE` in `sw.js`** (`svitlo-v1` → `v2` …) whenever shipping changes to
-  index.html/app.js/icons, otherwise installed home-screen apps may keep the old shell.
+- **Bump `VERSION` in `app.js` and `CACHE` in `sw.js` together** (`4` ↔ `svitlo-v4` …) whenever
+  shipping changes to index.html/app.js/icons, otherwise installed home-screen apps may keep the
+  old shell. The version is shown in the footer; a test fails if the two drift apart.
 - On iPhone: open the URL in Safari → Share → "На початковий екран".
 
 ## Design
