@@ -6,7 +6,7 @@
 
   // ---------- налаштування ----------
   // Версія застосунку: показується внизу екрана. Піднімайте разом з CACHE у sw.js.
-  const VERSION = 11;
+  const VERSION = 12;
   const DEFAULT_GROUP = '2.2';
   const GROUPS = ['1.1','1.2','2.1','2.2','3.1','3.2','4.1','4.2','5.1','5.2','6.1','6.2'];
   const FILES = ['Poltavaoblenergo.json', 'Poltavaoblenerho.json'];
@@ -473,23 +473,26 @@
     });
   }
 
-  // Pull-to-refresh-подібний жест: якщо сторінку тягнуть униз від самого верху, гасимо сяйво
-  // (клас pulled), а щойно відпустили й сторінка повернулась на місце — вмикаємо знову.
-  // На iOS під час «гумового» відскоку scrollY стає від'ємним; про всяк випадок рахуємо і рух пальця.
-  const PULL_PX = 40;
-  function initPullGlow() {
-    const body = document.body;
-    let startY = null;
-    const set = on => body.classList.toggle('pulled', on);
+  // Сяйво прибите до верху екрана і гасне (клас glow-off), коли:
+  //  • сторінку прокрутили вниз більше ніж на SCROLL_PX;
+  //  • її тягнуть униз від самого верху, як pull-to-refresh (на iOS під час «гумового» відскоку
+  //    scrollY від'ємний; про всяк випадок рахуємо ще й рух пальця).
+  // Повернулись нагору й відпустили — сяйво плавно вмикається знову.
+  const PULL_PX = 40, SCROLL_PX = 12;
+  function initGlowFade() {
+    let startY = null, pulled = false;
+    const update = () => document.body.classList.toggle('glow-off', pulled || scrollY > SCROLL_PX);
     addEventListener('touchstart', e => { startY = scrollY <= 0 ? e.touches[0].clientY : null; }, { passive: true });
     addEventListener('touchmove', e => {
-      if (startY !== null && scrollY <= 0 && e.touches[0].clientY - startY > PULL_PX) set(true);
+      if (startY !== null && scrollY <= 0 && e.touches[0].clientY - startY > PULL_PX) { pulled = true; update(); }
     }, { passive: true });
-    addEventListener('touchend', () => { startY = null; if (scrollY >= 0) set(false); }, { passive: true });
+    addEventListener('touchend', () => { startY = null; if (scrollY >= 0) pulled = false; update(); }, { passive: true });
     addEventListener('scroll', () => {
-      if (scrollY < -PULL_PX) set(true);
-      else if (scrollY >= 0 && startY === null) set(false);
+      if (scrollY < -PULL_PX) pulled = true;
+      else if (scrollY >= 0 && startY === null) pulled = false;
+      update();
     }, { passive: true });
+    update();
   }
 
   function start() {
@@ -497,7 +500,7 @@
     initCompare();
     initQuick();
     initSwipe();
-    initPullGlow();
+    initGlowFade();
     initListMode();
     render();
     load();

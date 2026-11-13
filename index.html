@@ -74,9 +74,9 @@
   }
   main { max-width: 440px; margin: 0 auto; }
   /* Теплий конус світла згори, наче світить лампа, — тільки коли світло є */
-  /* absolute (а не fixed) — сяйво прокручується разом зі сторінкою; висота — щоб закінчувалось над циферблатом */
+  /* Сяйво прибите до верху екрана; висота — щоб закінчувалось над циферблатом */
   body::before {
-    content: ''; position: absolute; inset: 0 0 auto; height: calc(env(safe-area-inset-top) + 115px);
+    content: ''; position: fixed; inset: 0 0 auto; height: calc(env(safe-area-inset-top) + 115px);
     z-index: -1; pointer-events: none;
     background:
       radial-gradient(ellipse 50% 75% at 50% 0, rgba(255, 210, 110, .7), rgba(255, 200, 90, 0) 100%),
@@ -84,8 +84,8 @@
     opacity: 0; transition: opacity 1.2s ease;
   }
   body[data-state="on"]::before, body[data-state="maybe"]::before { opacity: 1; }
-  /* Потягнули сторінку вниз від самого верху (як pull-to-refresh) — лампа швидко гасне */
-  body.pulled::before { opacity: 0; transition-duration: .35s; }
+  /* Прокрутили вниз або потягнули від самого верху (як pull-to-refresh) — лампа швидко гасне */
+  body.glow-off::before { opacity: 0; transition-duration: .35s; }
   /* Застосунок малюється під статус-баром iPhone (black-translucent), а там текст завжди білий.
      У світлій темі підкладаємо під нього темну смужку, що тане донизу; у браузері висота = 0. */
   body::after {
