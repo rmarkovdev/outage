@@ -6,7 +6,7 @@
 
   // ---------- налаштування ----------
   // Версія застосунку: показується внизу екрана. Піднімайте разом з CACHE у sw.js.
-  const VERSION = 8;
+  const VERSION = 9;
   const DEFAULT_GROUP = '2.2';
   const GROUPS = ['1.1','1.2','2.1','2.2','3.1','3.2','4.1','4.2','5.1','5.2','6.1','6.2'];
   const FILES = ['Poltavaoblenergo.json', 'Poltavaoblenerho.json'];
@@ -144,6 +144,16 @@
     return favs.concat(g).slice(-max);
   }
 
+  // Свайп між збереженими чергами: dir = 1 — наступна, -1 — попередня (по колу).
+  // Якщо поточна черга не збережена, свайп веде на першу/останню збережену.
+  function nextFav(favs, g, dir) {
+    if (!favs.length) return null;
+    const i = favs.indexOf(g);
+    if (i === -1) return dir > 0 ? favs[0] : favs[favs.length - 1];
+    if (favs.length < 2) return null;
+    return favs[(i + dir + favs.length) % favs.length];
+  }
+
   // Поточний стан і найближча зміна
   function status(daysMap, now) {
     const k = kyiv(now);
@@ -176,7 +186,7 @@
     return `${h} год ${m} хв`;
   }
 
-  const api = { VERSION, GROUPS, MAX_FAVS, toggleFav, scheduleChanged, DEFAULT_GROUP, kyiv, addDays, slotsFromHours, buildDays,
+  const api = { VERSION, GROUPS, MAX_FAVS, toggleFav, nextFav, scheduleChanged, DEFAULT_GROUP, kyiv, addDays, slotsFromHours, buildDays,
     maybeAsOn, intervals, periods, LIST_MODES, status, hhmm, duration };
 
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
@@ -416,6 +426,33 @@
     });
   }
 
+  // Горизонтальний свайп по екрану перемикає збережені черги (вертикальна прокрутка не заважає:
+  // жест рахується, лише якщо рух переважно горизонтальний).
+  function initSwipe() {
+    let x0 = 0, y0 = 0, t0 = 0, tracking = false;
+    const area = $('main');
+    area.addEventListener('touchstart', e => {
+      tracking = e.touches.length === 1 && !e.target.closest('select');
+      if (!tracking) return;
+      x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; t0 = Date.now();
+    }, { passive: true });
+    area.addEventListener('touchend', e => {
+      if (!tracking) return;
+      tracking = false;
+      const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0;
+      if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5 || Date.now() - t0 > 800) return;
+      const dir = dx < 0 ? 1 : -1;
+      const g = nextFav(favs, group, dir);
+      if (!g || g === group) return;
+      setGroup(g);
+      for (const el of [$('.clock'), $('#days')]) {
+        el.classList.remove('swipe-next', 'swipe-prev');
+        void el.offsetWidth;                       // перезапуск анімації
+        el.classList.add(dir > 0 ? 'swipe-next' : 'swipe-prev');
+      }
+    }, { passive: true });
+  }
+
   function initListMode() {
     $('#list-mode').addEventListener('change', e => {
       if (!LIST_MODES.includes(e.target.value)) return;
@@ -435,6 +472,7 @@
     initPicker();
     initCompare();
     initQuick();
+    initSwipe();
     initListMode();
     render();
     load();

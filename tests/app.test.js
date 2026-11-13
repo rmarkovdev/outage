@@ -116,3 +116,13 @@ test('scheduleChanged: only a change in a day present in both counts', () => {
 
   assert.equal(A.scheduleChanged(null, fixture), false);
 });
+
+test('nextFav: swipe cycles through saved queues', () => {
+  assert.equal(A.nextFav([], '2.2', 1), null);
+  assert.equal(A.nextFav(['2.2'], '2.2', 1), null);
+  assert.equal(A.nextFav(['2.2'], '3.1', 1), '2.2');
+  assert.equal(A.nextFav(['2.2', '4.1'], '2.2', 1), '4.1');
+  assert.equal(A.nextFav(['2.2', '4.1'], '2.2', -1), '4.1');
+  assert.equal(A.nextFav(['2.2', '4.1'], '4.1', 1), '2.2');
+  assert.equal(A.nextFav(['2.2', '4.1'], '3.1', -1), '4.1');
+});

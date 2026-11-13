@@ -90,6 +90,11 @@
   #refresh svg { width: 18px; height: 18px; }
   #refresh.spin svg { animation: spin .6s linear; }
   @keyframes spin { to { transform: rotate(360deg); } }
+  /* Перехід між чергами свайпом: новий графік «заїжджає» з того боку, куди тягнули */
+  @keyframes from-right { from { transform: translateX(28px); opacity: .25; } }
+  @keyframes from-left { from { transform: translateX(-28px); opacity: .25; } }
+  .swipe-next { animation: from-right .26s ease-out; }
+  .swipe-prev { animation: from-left .26s ease-out; }
 
   .quick { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
   .quick button { appearance: none; font: inherit; cursor: pointer; border-radius: 999px; }
@@ -176,6 +181,7 @@
   @media (prefers-reduced-motion: reduce) {
     body, .seg { transition: none; }
     #refresh.spin svg { animation: none; }
+    .swipe-next, .swipe-prev { animation: none; }
   }
 </style>
 </head>
