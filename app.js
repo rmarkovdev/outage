@@ -6,7 +6,7 @@
 
   // ---------- налаштування ----------
   // Версія застосунку: показується внизу екрана. Піднімайте разом з CACHE у sw.js.
-  const VERSION = 12;
+  const VERSION = 13;
   const DEFAULT_GROUP = '2.2';
   const GROUPS = ['1.1','1.2','2.1','2.2','3.1','3.2','4.1','4.2','5.1','5.2','6.1','6.2'];
   const FILES = ['Poltavaoblenergo.json', 'Poltavaoblenerho.json'];
