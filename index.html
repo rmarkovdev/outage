@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#EDEFF3">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Світло">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -74,14 +74,26 @@
   }
   main { max-width: 440px; margin: 0 auto; }
   /* Теплий конус світла згори, наче світить лампа, — тільки коли світло є */
+  /* absolute (а не fixed) — сяйво прокручується разом зі сторінкою; висота — щоб закінчувалось над циферблатом */
   body::before {
-    content: ''; position: fixed; inset: 0 0 auto; height: calc(env(safe-area-inset-top) + 115px);  /* закінчується над циферблатом */ z-index: -1; pointer-events: none;
+    content: ''; position: absolute; inset: 0 0 auto; height: calc(env(safe-area-inset-top) + 115px);
+    z-index: -1; pointer-events: none;
     background:
       radial-gradient(ellipse 50% 75% at 50% 0, rgba(255, 210, 110, .7), rgba(255, 200, 90, 0) 100%),
       radial-gradient(ellipse 90% 100% at 50% 0, rgba(242, 185, 43, .3), rgba(242, 185, 43, 0) 100%);
     opacity: 0; transition: opacity 1.2s ease;
   }
   body[data-state="on"]::before, body[data-state="maybe"]::before { opacity: 1; }
+  /* Потягнули сторінку вниз від самого верху (як pull-to-refresh) — лампа швидко гасне */
+  body.pulled::before { opacity: 0; transition-duration: .35s; }
+  /* Застосунок малюється під статус-баром iPhone (black-translucent), а там текст завжди білий.
+     У світлій темі підкладаємо під нього темну смужку, що тане донизу; у браузері висота = 0. */
+  body::after {
+    content: ''; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top); z-index: 10; pointer-events: none;
+    background: linear-gradient(rgba(29, 36, 51, .55), rgba(29, 36, 51, .4) 70%, rgba(29, 36, 51, 0));
+  }
+  body[data-state="off"]::after { background: none; }
+  @media (prefers-color-scheme: dark) { body::after { background: none; } }
   @media (prefers-color-scheme: dark) {
     body::before {
       background:
