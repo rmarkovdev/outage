@@ -73,6 +73,22 @@
              max(20px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   }
   main { max-width: 440px; margin: 0 auto; }
+  /* Теплий конус світла згори, наче світить лампа, — тільки коли світло є */
+  body::before {
+    content: ''; position: fixed; inset: 0 0 auto; height: calc(env(safe-area-inset-top) + 115px);  /* закінчується над циферблатом */ z-index: -1; pointer-events: none;
+    background:
+      radial-gradient(ellipse 50% 75% at 50% 0, rgba(255, 210, 110, .7), rgba(255, 200, 90, 0) 100%),
+      radial-gradient(ellipse 90% 100% at 50% 0, rgba(242, 185, 43, .3), rgba(242, 185, 43, 0) 100%);
+    opacity: 0; transition: opacity 1.2s ease;
+  }
+  body[data-state="on"]::before, body[data-state="maybe"]::before { opacity: 1; }
+  @media (prefers-color-scheme: dark) {
+    body::before {
+      background:
+        radial-gradient(ellipse 50% 75% at 50% 0, rgba(255, 196, 80, .42), rgba(255, 200, 90, 0) 100%),
+        radial-gradient(ellipse 90% 100% at 50% 0, rgba(242, 185, 43, .2), rgba(242, 185, 43, 0) 100%);
+    }
+  }
 
   header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   .who { position: relative; }
@@ -126,6 +142,8 @@
   .compare:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
   .tick-line { stroke: var(--muted); stroke-width: .75; opacity: .55; }
   .tick-line.major { stroke: var(--fg); stroke-width: 1; opacity: .7; }
+  .seg.past, .prev.past { opacity: .3; transition: fill .4s ease, opacity .4s ease; }
+  .day-edge { stroke: var(--fg); stroke-width: 2; stroke-linecap: round; }
   .hand { stroke: var(--hand); stroke-width: 2.5; stroke-linecap: round; }
   .hand-dot { fill: var(--hand); }
 

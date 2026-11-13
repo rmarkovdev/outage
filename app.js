@@ -6,7 +6,7 @@
 
   // ---------- налаштування ----------
   // Версія застосунку: показується внизу екрана. Піднімайте разом з CACHE у sw.js.
-  const VERSION = 9;
+  const VERSION = 10;
   const DEFAULT_GROUP = '2.2';
   const GROUPS = ['1.1','1.2','2.1','2.2','3.1','3.2','4.1','4.2','5.1','5.2','6.1','6.2'];
   const FILES = ['Poltavaoblenergo.json', 'Poltavaoblenerho.json'];
@@ -267,11 +267,14 @@
     const svg = $('#dial');
     let html = `<defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
       <rect width="6" height="6" fill="var(--seg-off)"/><rect width="3" height="6" fill="var(--lamp)"/></pattern></defs>`;
+    // Минулі півгодини (вже повністю минули) пригашені: яскрава лише дуга від «зараз» до кінця доби,
+    // щоб увечері кільце не читалося як графік на завтра.
     for (let i = 0; i < 48; i++) {
-      const cls = 'seg ' + (SEG_CLS[slots && slots[i]] || 'none');
+      const past = nowMin != null && (i + 1) * 30 <= nowMin ? ' past' : '';
+      const cls = 'seg ' + (SEG_CLS[slots && slots[i]] || 'none') + past;
       if (prevSlots) {
         html += `<path class="${cls}" d="${segPath(i, R_IN + 11, R_OUT)}"/>`;
-        html += `<path class="prev ${SEG_CLS[prevSlots[i]] || 'none'}" d="${segPath(i, R_IN, R_IN + 9)}"/>`;
+        html += `<path class="prev ${SEG_CLS[prevSlots[i]] || 'none'}${past}" d="${segPath(i, R_IN, R_IN + 9)}"/>`;
       } else {
         html += `<path class="${cls}" d="${segPath(i)}"/>`;
       }
@@ -285,7 +288,9 @@
       html += `<line class="tick-line${major ? ' major' : ''}" x1="${lx0.toFixed(1)}" y1="${ly0.toFixed(1)}" x2="${lx1.toFixed(1)}" y2="${ly1.toFixed(1)}"/>`;
       html += `<text class="tick${major ? '' : ' minor'}" x="${x.toFixed(1)}" y="${y.toFixed(1)}">${h}</text>`;
     }
+    // Межа доби на 00: риска через усе кільце — тут сьогоднішній графік закінчується.
     if (nowMin != null) {
+      html += `<line class="day-edge" x1="${CX}" y1="${CY - R_IN + 4}" x2="${CX}" y2="${CY - R_OUT - 6}"/>`;
       const deg = nowMin / 1440 * 360;
       const [x0, y0] = polar(R_IN - 3, deg), [x1, y1] = polar(R_OUT + 8, deg);
       html += `<line class="hand" x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}"/>`;
