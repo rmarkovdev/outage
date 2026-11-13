@@ -7,11 +7,15 @@ UI language: Ukrainian. Talk to the owner in Ukrainian unless they write in Engl
 ## Stack and constraints
 - Vanilla HTML/CSS/JS, **no build step, no dependencies, no framework**. Keep it that way
   unless asked: GitHub Pages serves the repo root as-is.
-- `index.html` — markup + all CSS. `app.js` — logic and UI (one IIFE). `sw.js` — service worker.
-  `manifest.webmanifest` + `icon-*.png`, `apple-touch-icon.png`.
-- `app.js` doubles as a CommonJS module: when `module.exports` exists it exports the pure
-  functions (`buildDays`, `slotsFromHours`, `intervals`, `status`, `hhmm`, `duration`, `kyiv`,
-  `addDays`) and skips the UI. Keep logic pure and testable that way.
+- `index.html` — markup only. `style.css` — all styles, grouped by screen section.
+- `js/` — native ES modules (`<script type="module">`, all preloaded via `modulepreload` in index.html):
+  `config.js` (VERSION, queues, data URLs), `time.js` (Kyiv time, formatting), `schedule.js` (JSON parsing
+  and schedule math), `favs.js` (saved queues), `state.js` (app state + localStorage), `data.js` (fetch),
+  `dial.js` (SVG dial), `view.js` (render from state), `gestures.js` (swipe, glow fade, no zoom),
+  `main.js` (entry point: wires events). `sw.js` — service worker.
+- Pure logic (`time`, `schedule`, `favs`, `config`) has no DOM access and is imported directly by the tests.
+  Keep it that way. `package.json` exists only to set `"type": "module"` for Node — no dependencies.
+- New file in `js/` → add it to `SHELL` in `sw.js` and a `modulepreload` link in index.html (a test checks sw.js).
 - All times are computed in **Europe/Kyiv** via `Intl.DateTimeFormat`, independent of the
   phone's time zone.
 
@@ -46,8 +50,8 @@ Reading it literally (`on, maybe`) produces fake 30-min windows with power.
 ## Deploy
 - GitHub repo `rmarkovdev/outage`, GitHub Pages from branch `main`, folder `/` (root).
   URL: https://rmarkovdev.github.io/outage/
-- **Bump `VERSION` in `app.js` and `CACHE` in `sw.js` together** (`4` ↔ `svitlo-v4` …) whenever
-  shipping changes to index.html/app.js/icons, otherwise installed home-screen apps may keep the
+- **Bump `VERSION` in `js/config.js` and `CACHE` in `sw.js` together** (`4` ↔ `svitlo-v4` …) whenever
+  shipping changes to index.html/style.css/js/icons, otherwise installed home-screen apps may keep the
   old shell. The version is shown in the footer; a test fails if the two drift apart.
 - On iPhone: open the URL in Safari → Share → "На початковий екран".
 

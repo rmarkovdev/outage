@@ -1,12 +1,15 @@
 // Run: node --test
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const path = require('node:path');
-const fs = require('node:fs');
-const A = require('../app.js');
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import * as config from '../js/config.js';
+import * as time from '../js/time.js';
+import * as schedule from '../js/schedule.js';
+import * as favs from '../js/favs.js';
 
-const fixture = JSON.parse(fs.readFileSync(
-  path.join(__dirname, 'fixtures', 'Poltavaoblenergo-2026-11-08.json'), 'utf8'));
+const A = { ...config, ...time, ...schedule, ...favs };
+const read = rel => fs.readFileSync(new URL(rel, import.meta.url), 'utf8');
+const fixture = JSON.parse(read('./fixtures/Poltavaoblenergo-2026-11-08.json'));
 
 const fmt = slots => A.intervals(slots)
   .map(i => `${i.state === 'maybe' ? '?' : ''}${A.hhmm(i.start * 30)}-${A.hhmm(i.end * 30)}`);
@@ -87,8 +90,8 @@ test('maybeAsOn: "maybe" slots become "on", others unchanged', () => {
   assert.deepEqual(fmt(s), ['02:30-06:30', '09:30-13:30', '15:30-19:30', '21:30-24:00']);
 });
 
-test('VERSION in app.js matches CACHE in sw.js', () => {
-  const sw = fs.readFileSync(path.join(__dirname, '..', 'sw.js'), 'utf8');
+test('VERSION in js/config.js matches CACHE in sw.js', () => {
+  const sw = read('../sw.js');
   assert.equal(sw.match(/const CACHE = 'svitlo-v(\d+)'/)[1], String(A.VERSION));
 });
 
@@ -125,4 +128,10 @@ test('nextFav: swipe cycles through saved queues', () => {
   assert.equal(A.nextFav(['2.2', '4.1'], '2.2', -1), '4.1');
   assert.equal(A.nextFav(['2.2', '4.1'], '4.1', 1), '2.2');
   assert.equal(A.nextFav(['2.2', '4.1'], '3.1', -1), '4.1');
+});
+
+test('service worker caches every module in js/', () => {
+  const sw = read('../sw.js');
+  const modules = fs.readdirSync(new URL('../js/', import.meta.url)).filter(f => f.endsWith('.js'));
+  for (const f of modules) assert.ok(sw.includes(`'${f.replace('.js', '')}'`), `sw.js SHELL is missing js/${f}`);
 });

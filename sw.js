@@ -1,8 +1,10 @@
 // Кешує оболонку застосунку та шрифти, щоб він відкривався без інтернету.
 // Графік зберігається окремо (localStorage), тому офлайн видно останній завантажений.
-const CACHE = 'svitlo-v13';  // = VERSION в app.js
-const SHELL = ['./', 'index.html', 'app.js', 'manifest.webmanifest',
-  'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
+const CACHE = 'svitlo-v14';  // = VERSION у js/config.js
+const SHELL = ['./', 'index.html', 'style.css', 'manifest.webmanifest',
+  'icon-192.png', 'icon-512.png', 'apple-touch-icon.png',
+  ...['main', 'config', 'time', 'schedule', 'favs', 'state', 'data', 'dial', 'view', 'gestures']
+    .map(m => `js/${m}.js`)];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
